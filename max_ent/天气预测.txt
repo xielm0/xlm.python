@@ -1,0 +1,8 @@
+import maxent2
+model = maxent2.MaxEnt()
+model.load_data('E:\\python\\test\\tianqi.txt')
+model.train()
+model.predict('Sunny')
+    [(0.9763203118841158, 'Outdoor'), (0.02367968811588421, 'Indoor')]
+model.predict('Cloudy')
+    [(0.7136730549489295, 'Outdoor'), (0.28632694505107054, 'Indoor')]
