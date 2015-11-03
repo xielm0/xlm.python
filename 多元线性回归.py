@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#code:myhaspl@qq.com
-#7-18.py
+#code:xlm
 #bx=y 
 import numpy as np
 
