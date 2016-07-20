@@ -23,17 +23,39 @@ import random
 import copy 
 
 #-------------数据规约处理-------------
- 
-    
-def init_x(my_input,m):
+#param : minmax, size=[n,m] ,transf
+def npminmax(x,xmin,xmax,ymin=-1,ymax=1):
+    y=(ymax-ymin)*(x-xmin)/(xmax-xmin)+ymin
+    return y
+   
+def init_x(x,minmax,ymin=-1,ymax=1):
+     """x,一个样本,minmax,一个list,如[[0,20],[-1,1]]"""  
+     if np.ndim(minmax)==1:  
+         y=npminmax(x,minmax[0],minmax[1])
+         return y
+     else :    
+         y=np.zeros_like(x)
+         for i in xrange(0,len(x)):
+             y[i]=npminmax(x[i],minmax[i][0],minmax[i][1])
+         return y
+         
+def init_input(my_input,minmax,m):
     n=len(my_input) 
     #m > len(my_input[0])
-    x=np.zeros((n,m))  
-    for i in xrange(0,n): 
-        for j in xrange(0,len(my_input[0])): 
-            x[i][j]=my_input[i][j]
+    y=np.zeros((n,m))  
+    for i,x in enumerate(my_input):
+        xx=init_x(x,minmax)
+        for j,a in enumerate(xx):
+            y[i][j]=a 
             
-    return x
+    return y
+
+def init_d(x,minmax,ymin=-1,ymax=1):
+    """y的元素是数字"""
+    y=x
+    for i,xi in enumerate(x):
+        y[i]=init_x(xi,minmax,ymin=-1,ymax=1) 
+    return y  
         
 def init_b(k,n):
     b=np.random.uniform(-1.0,1.0,(k,n))
@@ -42,6 +64,7 @@ def init_b(k,n):
 def init_w(k,n,m):
     '''初始化w矩阵,大小kxnxn '''
     w=np.random.uniform(-1.0,1.0,(k,n,m))   
+    
     return w
     
 def init_z(k,n):
@@ -71,10 +94,11 @@ def get_v(my_x,my_w,my_b):
     my_w=np.array([[0.5,0.4,0.3],[0.5,0.6,0.2],[0.1,0.1,0.1]]) 
     y=get_v(my_x,my_w)
     y1=x1*w11+x2*w21,y2=x1*w12+x2*w22
-    y1=dot(x,w[:,1])
+    y1=dot(my_x,my_w[:,0])
     y=dot(x,w)=array([ 1.5,  1.6]) #第1行*第1列，第1行*第2列
     '''
     my_y=np.dot(my_x,my_w)+my_b 
+    #或者： my_y=np.dot(my_w.T,my_x)+my_b #注意转置
     return np.array(my_y) 
     
 def sigmod(my_x):
@@ -118,14 +142,12 @@ def delta_tanh(flag,my_d,my_y,my_delta,my_w):
     return v_delta     
     
 def sgn(x) :
-    if x>=0.5 :
+    if x>=0 :
         return 1
     else :
         return 0
         
-#激励传播函数
-ann_func=tanh    
-delta_func=delta_tanh    
+
         
 #-------------训练-----------  
 def train_forword(i_xi):
@@ -147,8 +169,7 @@ def train_forword(i_xi):
     #前向计算，激励传播;     
     for level in xrange(0,k): 
         if level==0 : #第一层
-            #ann_y[0]=i_xi
-            z=get_v(i_xi,ann_w[0],ann_b[0])
+            z=get_v(i_xi,ann_w[0],ann_b[0]) 
             y=ann_func(z)
             ann_z[level]=z
             ann_y[level]=y 
@@ -158,15 +179,15 @@ def train_forword(i_xi):
             ann_z[level]=z
             ann_y[level]=y  
         elif level==k-1:  #输出层
-        #输出层只有一个目标，所以只取ann_w[level][0]
-            z=get_v(ann_y[level-1],ann_w[level][0],ann_b[level][0])
+        #输出层只有一个目标，注意，不是取ann_w[level][0]，而是ann_w[level][:,0]
+            z=get_v(ann_y[level-1],ann_w[level][:,0],ann_b[level][0])
             y=ann_func(z)
             #y=sgn(y)
             ann_z[level][0]=z
             ann_y[level][0]=y  
-            res = y
+            res = y 
 
-    return y
+    return res
     
 def train_back(i_xi,i_d,eta,alpha):
     '''一个样本的计算,后向计算
@@ -192,18 +213,19 @@ def train_back(i_xi,i_d,eta,alpha):
         tmp=np.zeros_like(ann_w[0]) 
         #输出层,delta只有一个值 
         if level==k-1: 
-            ann_delta[level,0]=delta_func(1,i_d,ann_y[level][0] ,None,None)  
-            #print 'x=',i_xi[0:2],'y=',ann_y[level][0],'d=',i_d,'delta=',ann_delta[level,0],'eta=',eta  
-            #计算delta_w
-            for j in xrange(0,n):
+            ann_delta[level,0]=delta_func(1,i_d,ann_y[level][0] ,None,None)    
+            #print 'x=',i_xi[0:2],'y=',ann_y[level][0],'d=',i_d,'delta=',ann_delta[level],'eta=',eta  
+            #计算delta_w 
+            for j in xrange(0,n): 
                 tmp[j]=eta * ann_delta[level] * ann_y[level-1,j] 
+                #print 'tmp['+str(j)+']=',tmp[j],ann_y[level-1,j],ann_delta[level,0] 
                 
             
         elif level>0: ##隐藏层
             ann_delta[level]=delta_func(3,None,ann_y[level],ann_delta[level+1],ann_w[level+1]) 
             
             for j in xrange(0,n):
-                tmp[j]=eta * ann_delta[level] * ann_y[level-1,j] 
+                tmp[j]=eta * ann_delta[level] * ann_y[level-1,j]  
             
         else: #输入层
             ann_delta[level]=delta_func(3,None,ann_y[level],ann_delta[level+1],ann_w[level+1]) 
@@ -215,15 +237,22 @@ def train_back(i_xi,i_d,eta,alpha):
         delta_w[level]= tmp + delta_w[level]*alpha   
         ann_w[level]=ann_w[level]+delta_w[level]
         ann_b[level] = ann_b[level] + eta * ann_delta[level]
-        #print 'ann_b[level] =',ann_delta[level] 
+        #print 'ann_delta[',level,'] =',ann_delta[level] 
+        #print 'delta_w[',level,'] =',delta_w[level] 
         
     if 0 :
-        print '---------------------'
-        print 'x=',i_xi,'d=',i_d
-        #print 'ann_y=',ann_y
-        print 'ann_delta=',ann_delta
-        #print 'delta_w=',delta_w  
-        print 'ann_b=',ann_b  
+        print '------------------------' 
+        print 'd=',i_d
+        print 'ann_y[-1]=',ann_y[-1] 
+        print 'ann_delta[-1]=',ann_delta[-1] 
+        print 'delta_w[-1]=',delta_w[-1]
+        print 'ann_w[-1][:,0] =',ann_w[-1][:,0] 
+        print 'ann_b[-1]=',ann_b[-1] 
+        print '------------------------'  
+        print 'ann_y[-2]=',ann_y[-2]
+        print 'ann_delta[-2]=',ann_delta[-2] 
+        print 'delta_w[-2]=',delta_w[-2]  
+        print 'ann_b[-2]=',ann_b[-2]  
         
 def init(k,n) :
     global ann_w
@@ -232,6 +261,8 @@ def init(k,n) :
     global ann_y
     global ann_delta
     global delta_w 
+    global ann_func
+    global delta_func 
     
     #第一步，初始化  
     ann_w=init_w(k,n,n)
@@ -241,6 +272,10 @@ def init(k,n) :
     ann_y=init_y(k,n)
     ann_delta=init_delta(k,n) 
     delta_w=init_delta_w(k,n,n) 
+    
+    #激励传播函数
+    ann_func=tanh    
+    delta_func=delta_tanh    
             
 
 def train(my_x,my_d,eta_0,alpha_0):
@@ -259,7 +294,7 @@ def train(my_x,my_d,eta_0,alpha_0):
     err=[] 
     
     
-    cnt = len(my_x)
+    cnt = int(len(my_x)/2)
     #第二步，
     while True: 
         #学习率
@@ -272,9 +307,10 @@ def train(my_x,my_d,eta_0,alpha_0):
         #打乱样本,并抽样  
         for i in xrange(0,cnt):
             #随机选取一行，对神经网络进行更新  
-            #i = np.random.randint(my_x.shape[0])   
+            i = np.random.randint(my_x.shape[0])   
             #单样本训练
             y=train_forword(my_x[i])
+            #print my_d[i] , y
             e= np.square(my_d[i]-y)*0.5             
             mse+= e
             
@@ -295,16 +331,17 @@ def train(my_x,my_d,eta_0,alpha_0):
             print 'ann_w[0]=',ann_w[0] 
         elif train_count%50 ==0 :
             print u'--开始第%d次训练--##误差为%f'%(train_count,mse) 
-            if 1 :
+            if 0 :
                 print '---------------------' 
-                print 'ann_w[0]=',ann_w[0] 
-                #print 'ann_y=',ann_y
+                #print 'ann_w[0]=',ann_w[0]  
+                print 'ann_y=',ann_y
                 #print 'ann_z=',ann_z
-                print 'ann_delta=',ann_delta 
+                #print 'ann_b=',ann_b
+                #print 'ann_delta=',ann_delta 
                 
         if mse<expect_e or train_count>=maxtrycount:
             print u'--开始第%d次训练--##误差为%f'%(train_count,mse) 
-            print 'best_w[0]=',best_w[0]    
+            print 'best_w=',best_w 
             print 'best_b=',best_b 
             
             break
@@ -347,7 +384,7 @@ eta_0=0.5  #初始学习率
 alpha_0=0.05 
 #终止条件控制
 expect_e=0  #
-maxtrycount=2000  #最大训练次数
+maxtrycount=1000  #最大训练次数
 #退火因子 
 if maxtrycount>=100:
     r= round(maxtrycount/10,0)
@@ -360,28 +397,30 @@ y2=np.cos(x1)
 train_x=[]
 d=[]   
 for i in xrange(0,len(x1)):
-    train_x.append([y1[i],x1[i]])
+    train_x.append([x1[i],y1[i]])
     d.append(1)
-    train_x.append([y2[i],x1[i]])
+    train_x.append([x1[i],y2[i]])
     d.append(0)
      
 train_x=np.array(train_x)
-target=np.array(d) 
+d=np.array(d) 
 
 
 #输入数据处理
-k=4 #隐藏层+输入层
-m=8  #隐藏层节点数
+k=8 #隐藏层+输入层
+m=3  #隐藏层节点数
 #input=init_input(train_x)
-ann_x=init_x(train_x,m)
+ann_x=init_input(train_x,[[-1,10],[-1,1]],m) 
+ann_d=init_d(d,[0,1])
+#print ann_d
 #init w,delta
 init(k,m) 
 
 #训练  
 #print ann_x[0:4]
-(best_w,best_b,err)=train(ann_x,target,eta_0,alpha_0)
+(best_w,best_b,err)=train(ann_x,ann_d,eta_0,alpha_0)
 #仿真
-out=np.zeros_like(target)
+out=np.zeros_like(d)
 
 for i in xrange(len(ann_x)):
     out[i]=sim(ann_x[i],best_w,best_b) 
@@ -401,8 +440,8 @@ plt.plot(range(len(err)),err)
 plt.subplot(212) 
 plt.xlim(x_min,x_max)  
 plt.ylim(y_min,y_max)  
-for i in xrange(0,len(ann_x)):  
-    if out[i]>0.5:  
+for i in xrange(0,len(train_x)):  
+    if out[i]>0:  
         plt.plot(train_x[i,0],train_x[i,1],'ro')  
     else:  
         plt.plot(train_x[i,0],train_x[i,1],'g*')  

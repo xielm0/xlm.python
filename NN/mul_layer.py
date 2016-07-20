@@ -463,6 +463,7 @@ def train(my_x,my_d):
             print u'--开始第1次训练--##误差为%f'%(mse)   
         elif train_count%50 ==0 :
             print u'--开始第%d次训练--##误差为%f'%(train_count,mse) 
+            #print 'ann_w=',ann_w
             #print 'delta_w=',delta_w 
 #            print 'delta_b=',delta_b  
         if mse<expect_e or train_count>=maxtrycount:

@@ -21,9 +21,9 @@ for i in xrange(0,len(x1)):
 input=np.array(train_x)
 target=np.array(d)
 #newff与matlab一样，生成一个前馈BP网络
-#newff([[3,10],[11,400]],[3,1]) #[3,1]代表(层,d[0]),层一定的数量才能模拟复杂的函数
-net=nl.net.newff([[0,20],[-1,1]],[8,1]) 
-err=net.train(input,target,epochs=2000, show=50, goal=0.0001)
+#newff(minmax, size, transf=None）
+net=nl.net.newff([[0,20],[-1,1]],[8,8,1])  #size=[8,1]
+err=net.train(input,target,epochs=2000, show=50, goal=0.01)
 out=net.sim(input)  
 #画图
 mymean=np.mean(out)  
