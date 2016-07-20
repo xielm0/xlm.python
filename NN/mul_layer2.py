@@ -142,7 +142,7 @@ def delta_tanh(flag,my_d,my_y,my_delta,my_w):
     return v_delta     
     
 def sgn(x) :
-    if x>=0 :
+    if x > 0.0 :
         return 1
     else :
         return 0
@@ -188,6 +188,7 @@ def train_forword(i_xi):
             res = y 
 
     return res
+
     
 def train_back(i_xi,i_d,eta,alpha):
     '''一个样本的计算,后向计算
@@ -232,13 +233,18 @@ def train_back(i_xi,i_d,eta,alpha):
             
             for j in xrange(0,n):
                 tmp[j]=eta * ann_delta[level] * i_xi[j] 
+        
+        #应用动量参数alpha         
+        delta_w[level]= tmp + delta_w[level]*alpha 
         #权重更新
-        #应用动量参数alpha 
-        delta_w[level]= tmp + delta_w[level]*alpha   
-        ann_w[level]=ann_w[level]+delta_w[level]
-        ann_b[level] = ann_b[level] + eta * ann_delta[level]
-        #print 'ann_delta[',level,'] =',ann_delta[level] 
-        #print 'delta_w[',level,'] =',delta_w[level] 
+        #ann_w[level]=ann_w[level]+delta_w[level]
+        #ann_b[level] = ann_b[level] + eta * ann_delta[level]
+        
+    #权重更新      
+    ann_w=ann_w+delta_w
+    ann_b = ann_b + eta * ann_delta
+    #print 'ann_delta[',level,'] =',ann_delta[level] 
+    #print 'delta_w[',level,'] =',delta_w[level] 
         
     if 0 :
         print '------------------------' 
@@ -294,15 +300,15 @@ def train(my_x,my_d,eta_0,alpha_0):
     err=[] 
     
     
-    cnt = int(len(my_x)/2)
+    cnt = int(len(my_x)/5)
     #第二步，
     while True: 
         #学习率
         eta=eta_0/(1+float(train_count)/r)
         #
-        alpha=alpha_0 
-        
+        alpha=alpha_0         
         train_count+=1 
+        
         mse =0
         #打乱样本,并抽样  
         for i in xrange(0,cnt):
@@ -315,20 +321,21 @@ def train(my_x,my_d,eta_0,alpha_0):
             mse+= e
             
             if i==cnt-1:
-                #mse=np.sqrt(mse/float(i))
+                #mse=mse/float(i))
                 err.append(mse)
                 #口袋算法,保存最优的ann_w
                 if mse<last_mse:
                     best_w=ann_w
                     best_b=ann_b
                     last_mse=mse
+            
             #后向计算    
             train_back(my_x[i],my_d[i],eta,alpha) 
             
             
         if  train_count==1:
             print u'--开始第1次训练--##误差为%f'%(mse) 
-            print 'ann_w[0]=',ann_w[0] 
+            #print 'ann_w[0]=',ann_w[0] 
         elif train_count%50 ==0 :
             print u'--开始第%d次训练--##误差为%f'%(train_count,mse) 
             if 0 :
@@ -341,8 +348,9 @@ def train(my_x,my_d,eta_0,alpha_0):
                 
         if mse<expect_e or train_count>=maxtrycount:
             print u'--开始第%d次训练--##误差为%f'%(train_count,mse) 
-            print 'best_w=',best_w 
-            print 'best_b=',best_b 
+            #print 'best_w=',best_w 
+            #print 'best_b=',best_b 
+            #print 'ann_y=',ann_y 
             
             break
     return (best_w,best_b,err)
@@ -350,7 +358,7 @@ def train(my_x,my_d,eta_0,alpha_0):
 def sim(i_xi,best_w,best_b): 
      
     global ann_z 
-    global ann_y  
+    global ann_y   
     
     k=len(best_w)
     #前向计算，激励传播;     
@@ -366,24 +374,20 @@ def sim(i_xi,best_w,best_b):
             y=ann_func(z)
             ann_z[level]=z
             ann_y[level]=y  
-        elif level==k-1:  #输出层
-        #输出层只有一个目标，所以只取ann_w[level][0]
-            z=get_v(ann_y[level-1],best_w[level][0],best_b[level][0])
-            y=ann_func(z)
-            #y=sgn(y)
-            ann_z[level][0]=z
-            ann_y[level][0]=y  
-            res = y
+        elif level==k-1:  #输出层 
+            z=get_v(ann_y[level-1],best_w[level][:,0],best_b[level][0])
+            y=ann_func(z)   
+            res = sgn(y)
+            #print y,res
 
-    return y    
+    return res    
 #-------------参数初始化-------------
 
 #学习率参数
-eta_0=0.5  #初始学习率 
-#动量参数 momentum
-alpha_0=0.05 
+eta_0=0.1    
+alpha_0=0.005
 #终止条件控制
-expect_e=0  #
+expect_e=0.1  #
 maxtrycount=1000  #最大训练次数
 #退火因子 
 if maxtrycount>=100:
@@ -407,8 +411,8 @@ d=np.array(d)
 
 
 #输入数据处理
-k=8 #隐藏层+输入层
-m=3  #隐藏层节点数
+k=4 #隐藏层+输入层
+m=8  #隐藏层节点数
 #input=init_input(train_x)
 ann_x=init_input(train_x,[[-1,10],[-1,1]],m) 
 ann_d=init_d(d,[0,1])
@@ -423,7 +427,8 @@ init(k,m)
 out=np.zeros_like(d)
 
 for i in xrange(len(ann_x)):
-    out[i]=sim(ann_x[i],best_w,best_b) 
+    out[i]=sim(ann_x[i],best_w,best_b)   
+    
 #画图
 my_mean=np.mean(out)  
 x_max=np.max(train_x[:,0])+1  
@@ -441,7 +446,7 @@ plt.subplot(212)
 plt.xlim(x_min,x_max)  
 plt.ylim(y_min,y_max)  
 for i in xrange(0,len(train_x)):  
-    if out[i]>0:  
+    if out[i]>0.5:  
         plt.plot(train_x[i,0],train_x[i,1],'ro')  
     else:  
         plt.plot(train_x[i,0],train_x[i,1],'g*')  
