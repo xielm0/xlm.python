@@ -45,4 +45,4 @@ if __name__ == '__main__' :
          'c' : {'A' : 1, 'B' : 1, 'C':1},  
          'd' : {'B' : 1, 'C' : 1}}  
   
-    PersonalRank(G, 0.85, 'A', 100)  
+    PersonalRank(G, 0.5, 'A', 100)  
