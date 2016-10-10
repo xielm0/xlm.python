@@ -24,8 +24,7 @@ def load_data(fname):
         y=[]
         x=[]
         for line in f: #类似line=f.readlines()
-                line=line.strip('\n')  #trim
-                str_list=line.split(' ')
+                str_list=line.strip('\n').split(' ')  #trim 
                 xi=[]
                 for v in str_list:  #v=c5 , f20
                         if v[0] == 'c':
