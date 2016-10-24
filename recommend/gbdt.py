@@ -21,20 +21,14 @@ def RandomSampling(dataMat,number):
   except:
      print 'error in RandomSampling '    
      
-#calc AUC
-     
-def aucfunc(fact,pred):
-    auc= metrics.roc_auc_score(fact,pred) 
-    return auc  
+#calc AUC 
     
 def rmse(fact,pred):
     total_err=0
     for i in range(pred.shape[0]): 
-        err=(pred[i]-train_y[i])**2
+        err=(pred[i]-fact[i])**2
         total_err+=err*err
-    return total_err/pred.shape[0]
- 
- 
+    return total_err/pred.shape[0]  
 
 if __name__ == "__main__":
     
@@ -43,6 +37,7 @@ if __name__ == "__main__":
     org_data1_s = RandomSampling(org_data1,100000) 
     org_data0_s = RandomSampling(org_data0,100000)  
     org_data_s = np.append(org_data1_s,org_data0_s,axis=0)
+    org_data = np.append(org_data1,org_data0,axis=0)
     
     #数据处理
     train_y =org_data_s[:,0] 
@@ -52,10 +47,10 @@ if __name__ == "__main__":
     model = GradientBoostingClassifier(
       loss='deviance'
     , learning_rate=0.1
-    , n_estimators=100
+    , n_estimators=30
     , subsample=1
     , min_samples_split=2
-    , min_samples_leaf=1
+    , min_samples_leaf=10
     , max_depth=3
     , init=None
     , random_state=None
@@ -68,13 +63,17 @@ if __name__ == "__main__":
     feature_importances = model.feature_importances_
     print feature_importances
 
-    pred=model.predict(train_x)
+    pred=model.predict(org_data[:,5:8])
+    print pred[1:10,]
    
     #new feature 
     new_train_data = train_x[:, feature_importances>0]
     
-    print rmse(train_y,pred)
-    print aucfunc(train_y,pred)
+    print rmse(org_data[:,0] ,pred)
+    print metrics.roc_auc_score(org_data[:,0],pred)
+    #print metrics.log_loss(train_y,pred)
+    print metrics.confusion_matrix(org_data[:,0],pred)
+    print metrics.accuracy_score(org_data[:,0],pred)
 
 
  
