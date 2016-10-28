@@ -74,6 +74,7 @@ if __name__ == "__main__":
     #print metrics.log_loss(train_y,pred)
     print metrics.confusion_matrix(org_data[:,0],pred)
     print metrics.accuracy_score(org_data[:,0],pred)
+    metrics.log_loss
 
 
  

@@ -13,10 +13,12 @@ Created on Fri Jul 08 16:52:52 2016
 #只适合线性
 """
 import numpy as np 
-a=0.1 #学习率 
+
+a=0.01 #学习率 
 x = np.array([[1,1],[2,1],[1,-1],[-1,-2]])
 d = np.array([1,1,-1,-1])
 w=np.array([1,0 ])
+
 def sign(v):
         if v>0:
                 return 1 
@@ -48,4 +50,5 @@ while True:
         
 z= comy(w,x[1])
 print z
+ 
 
